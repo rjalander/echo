@@ -21,6 +21,15 @@ dependencies {
 
   implementation "org.springframework.boot:spring-boot-starter-web"
 
+  implementation "io.cloudevents:cloudevents-spring:2.2.0"
+  implementation "io.cloudevents:cloudevents-json-jackson:2.2.0"
+  implementation "io.cloudevents:cloudevents-http-basic:2.2.0"
+  implementation "com.squareup.retrofit:retrofit"
+  implementation "com.squareup.retrofit:converter-jackson"
+  implementation "com.jakewharton.retrofit:retrofit1-okhttp3-client:1.1.0"
+
+
+
   implementation "redis.clients:jedis"
   implementation "io.reactivex:rxjava"
   implementation "com.hubspot.jinjava:jinjava"

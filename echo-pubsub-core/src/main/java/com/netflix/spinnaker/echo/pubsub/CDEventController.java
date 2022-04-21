@@ -1,6 +1,7 @@
 package com.netflix.spinnaker.echo.pubsub;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.netflix.spinnaker.echo.api.events.Event;
 import com.netflix.spinnaker.echo.api.events.Metadata;
 import com.netflix.spinnaker.echo.model.Pipeline;
@@ -20,6 +21,7 @@ import java.util.Map;
 import java.util.concurrent.TimeoutException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,8 +37,14 @@ import retrofit.client.Response;
 @Slf4j
 public class CDEventController {
 
+  // TODO: EventTypes Should be taken from cdevents-sdk-java - dev.cdevents.CDEventsEnum once
+  // integrated
   public static final String CD_ARTIFACT_PACKAGED_EVENT_TYPE = "cd.artifact.packaged.v1";
+  public static final String CD_ARTIFACT_PUBLISHED_EVENT_TYPE = "cd.artifact.published.v1";
   public static final String CD_SERVICE_DEPLOYED_EVENT_TYPE = "cd.service.deployed.v1";
+  private static final String CD_PIPELINERUN_FINISHED_EVENT_TYPE = "cd.pipelinerun.finished.v1";
+  private static final String CD_PIPELINERUN_STARTED_EVENT_TYPE = "cd.pipelinerun.started.v1";
+
   private static final int retryCount = 5;
   private static final String EVENT_TYPE = "googleCloudBuild";
   private static final PubsubSystem pubsubSystem = PubsubSystem.GOOGLE;
@@ -45,16 +53,26 @@ public class CDEventController {
   @Autowired OrcaService orca;
   @Autowired ManualEventHandler manualEventHandler;
   @Autowired PipelineCache pipelineCache;
+  @Autowired CDEventCreator cdEventCreator;
 
   @RequestMapping(value = "/consume", method = RequestMethod.POST)
   public ResponseEntity<Void> consumeEvent(@RequestBody CloudEvent inputEvent)
       throws IOException, TimeoutException {
-    if (inputEvent.getType().equals(CD_ARTIFACT_PACKAGED_EVENT_TYPE)) {
-      System.out.println("Received Event with type - " + CD_ARTIFACT_PACKAGED_EVENT_TYPE);
+    if (inputEvent.getType().equals(CD_PIPELINERUN_FINISHED_EVENT_TYPE)) {
+      System.out.println("Received Event with type - " + CD_PIPELINERUN_FINISHED_EVENT_TYPE);
+      log.info("Received Event with type - " + CD_PIPELINERUN_FINISHED_EVENT_TYPE);
+
+    } else if (inputEvent.getType().equals(CD_PIPELINERUN_STARTED_EVENT_TYPE)) {
+      System.out.println("Received Event with type - " + CD_PIPELINERUN_STARTED_EVENT_TYPE);
+      log.info("Received Event with type - " + CD_PIPELINERUN_STARTED_EVENT_TYPE);
 
     } else if (inputEvent.getType().equals(CD_SERVICE_DEPLOYED_EVENT_TYPE)) {
       System.out.println("Received Event with type - " + CD_SERVICE_DEPLOYED_EVENT_TYPE);
       log.info("Received Event with type - " + CD_SERVICE_DEPLOYED_EVENT_TYPE);
+
+    } else if (inputEvent.getType().equals(CD_ARTIFACT_PUBLISHED_EVENT_TYPE)) {
+      System.out.println("Received Event with type - " + CD_ARTIFACT_PUBLISHED_EVENT_TYPE);
+      log.info("Received Event with type - " + CD_ARTIFACT_PUBLISHED_EVENT_TYPE);
       Event event = createEvent(createMessageDescription());
       ManualEvent manualEvent = manualEventHandler.convertEvent(event);
       // List<Pipeline> pipeLines = manualEventHandler.getMatchingPipelines(manualEvent,
@@ -65,8 +83,15 @@ public class CDEventController {
         if (pipeline.toString().contains("poc")
             && pipeline.toString().contains("deploy_spinnaker_poc")) {
           log.info("Found Matching pipeline {}", pipeline);
-          triggerWithRetries(pipeline);
-          log.info("Successfully triggered {}", pipeline);
+          TriggerResponse response = triggerWithRetries(pipeline);
+          log.info(
+              "Successfully triggered pipeline: {} with execution id: {}",
+              pipeline,
+              response.getRef());
+          cdEventCreator.createPipelineRunStartedEvent();
+          // TODO: Mark as finished on some condition
+          cdEventCreator.createPipelineRunFinishedEvent(); // OR -
+          cdEventCreator.createServiceDeployedEvent(); // - received by Keptn
         }
       }
     } else {
@@ -77,6 +102,28 @@ public class CDEventController {
     CDEvent data = objectMapper.readValue(inputEvent.getData().toBytes(), CDEvent.class);
     System.out.println("CDEvent getID --> " + data.getId());
     System.out.println("CDEvent getSubject --> " + data.getSubject());
+    return ResponseEntity.ok().build();
+  }
+
+  @Value("${BROKER_SINK:http://localhost:8090/default/events-broker}")
+  private String BROKER_SINK;
+
+  @RequestMapping(value = "/produce", method = RequestMethod.POST)
+  public ResponseEntity<Void> produceEvent() throws IOException, TimeoutException {
+    log.info("produceEvent() : for BROKER_SINK URL - {}", BROKER_SINK);
+    CDEvent data = new CDEvent();
+    data.setId(123);
+    data.setSubject("cdevent");
+    objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+    CloudEvent cloudEvent =
+        cdEventCreator.createArtifactEvent(
+            CD_ARTIFACT_PACKAGED_EVENT_TYPE,
+            "123",
+            "produce_artifact",
+            "1.0",
+            objectMapper.writeValueAsString(data));
+    cdEventCreator.sendCloudEvent(cloudEvent);
+    log.info("produceEvent() : Done for BROKER_SINK URL - {}", BROKER_SINK);
     return ResponseEntity.ok().build();
   }
 
@@ -158,7 +205,7 @@ public class CDEventController {
 
   @RequestMapping(value = "/consume", method = RequestMethod.GET)
   public ResponseEntity<Void> handleGetRequest() {
-    System.out.println("Java-SDK CDEvent Consumer API !!");
+    System.out.println("CDEvent Consumer API is running !!");
     return ResponseEntity.ok().build();
   }
 }

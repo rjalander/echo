@@ -34,7 +34,8 @@ public class CDEventCreator {
 
   @Autowired ObjectMapper objectMapper;
 
-  @Value("${BROKER_SINK:http://localhost:8090/default/events-broker}")
+  @Value(
+      "${BROKER_SINK:http://broker-ingress.knative-eventing.svc.cluster.local/default/events-broker}")
   private String BROKER_SINK;
 
   public void createServiceDeployedEvent() throws IOException {

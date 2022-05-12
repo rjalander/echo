@@ -81,7 +81,7 @@ public class CDEventController {
       for (Pipeline pipeline : pipeLines) {
         System.out.println("Pipeline from pipelineCache - " + pipeline);
         if (pipeline.toString().contains("poc")
-            && pipeline.toString().contains("deploy_spinnaker_poc")) {
+            && pipeline.toString().contains("deploy-spinnaker-poc")) {
           log.info("Found Matching pipeline {}", pipeline);
           TriggerResponse response = triggerWithRetries(pipeline);
           log.info(

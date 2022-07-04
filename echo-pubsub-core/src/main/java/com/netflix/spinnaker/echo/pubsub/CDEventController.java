@@ -15,9 +15,11 @@ import com.netflix.spinnaker.echo.pipelinetriggers.orca.OrcaService.TriggerRespo
 import com.netflix.spinnaker.echo.pubsub.model.CDEvent;
 import io.cloudevents.CloudEvent;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,7 +74,36 @@ public class CDEventController {
 
     } else if (inputEvent.getType().equals(CD_ARTIFACT_PUBLISHED_EVENT_TYPE)) {
       System.out.println("Received Event with type - " + CD_ARTIFACT_PUBLISHED_EVENT_TYPE);
-      log.info("Received Event with type - " + CD_ARTIFACT_PUBLISHED_EVENT_TYPE);
+      log.info("RJR --> Received Event with type - " + CD_ARTIFACT_PUBLISHED_EVENT_TYPE);
+
+      log.info("RJR --> inputEvent.getDataSchema {} ", inputEvent.getDataSchema());
+      log.info("RJR --> inputEvent.getDataContentType {} ", inputEvent.getDataContentType());
+      log.info("RJR --> inputEvent.getDataSchema {} ", inputEvent.getDataSchema());
+      log.info("RJR --> inputEvent.getSource {} ", inputEvent.getSource());
+
+      Set<String> attrNames = inputEvent.getAttributeNames();
+      for (String attr : attrNames) {
+        log.info("RJR --> inputEvent.getAttribute {} of {}", inputEvent.getAttribute(attr), attr);
+      }
+      Set<String> extNames = inputEvent.getExtensionNames();
+      for (String ext : extNames) {
+        log.info("RJR --> inputEvent.getExtension {} of {}", inputEvent.getExtension(ext), ext);
+      }
+      byte[] ceData = inputEvent.getData().toBytes();
+      log.info("RJR --> inputEvent.getData toBytes {} ", ceData);
+      String ceDataJsonString = new String(ceData, StandardCharsets.UTF_8);
+      Map<String, Object> ceDataMap = objectMapper.readValue(ceDataJsonString, HashMap.class);
+      String contextId = (String) ceDataMap.get("shkeptncontext");
+      String triggerId = (String) ceDataMap.get("triggerid");
+      log.info("RJR --> ceDataMap.get(shkeptncontext) - {}", contextId);
+      log.info("RJR --> ceDataMap.get(triggerid) - {}", triggerId);
+
+      String cdId = inputEvent.getId();
+      log.info("RJR --> inputEvent.getId {} ", cdId);
+      String cdSubject = inputEvent.getSubject();
+      log.info("RJR --> inputEvent.getSubject {} ", cdSubject);
+
+      // inputEvent.getAttribute(BROKER_SINK);
       Event event = createEvent(createMessageDescription());
       ManualEvent manualEvent = manualEventHandler.convertEvent(event);
       // List<Pipeline> pipeLines = manualEventHandler.getMatchingPipelines(manualEvent,
@@ -80,8 +111,7 @@ public class CDEventController {
       List<Pipeline> pipeLines = pipelineCache.getPipelinesSync();
       for (Pipeline pipeline : pipeLines) {
         System.out.println("Pipeline from pipelineCache - " + pipeline);
-        if (pipeline.toString().contains("poc")
-            && pipeline.toString().contains("deploy-spinnaker-poc")) {
+        if (pipeline.getName().equals(("deploy-spinnaker-poc"))) {
           log.info("Found Matching pipeline {}", pipeline);
           TriggerResponse response = triggerWithRetries(pipeline);
           log.info(
@@ -91,7 +121,8 @@ public class CDEventController {
           cdEventCreator.createPipelineRunStartedEvent();
           // TODO: Mark as finished on some condition
           cdEventCreator.createPipelineRunFinishedEvent(); // OR -
-          cdEventCreator.createServiceDeployedEvent(); // - received by Keptn
+          cdEventCreator.createServiceDeployedEvent(
+              pipeline, contextId, triggerId); // - received by Keptn
         }
       }
     } else {
@@ -99,9 +130,6 @@ public class CDEventController {
           "Error: Un supported Event type received " + inputEvent.getType() + "\"");
     }
 
-    CDEvent data = objectMapper.readValue(inputEvent.getData().toBytes(), CDEvent.class);
-    System.out.println("CDEvent getID --> " + data.getId());
-    System.out.println("CDEvent getSubject --> " + data.getSubject());
     return ResponseEntity.ok().build();
   }
 
@@ -112,7 +140,7 @@ public class CDEventController {
   public ResponseEntity<Void> produceEvent() throws IOException, TimeoutException {
     log.info("produceEvent() : for BROKER_SINK URL - {}", BROKER_SINK);
     CDEvent data = new CDEvent();
-    data.setId(123);
+    data.setPipelineId("123");
     data.setSubject("cdevent");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     CloudEvent cloudEvent =

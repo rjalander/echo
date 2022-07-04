@@ -2,6 +2,7 @@ package com.netflix.spinnaker.echo.pubsub;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.netflix.spinnaker.echo.model.Pipeline;
 import com.netflix.spinnaker.echo.pubsub.model.CDEvent;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.message.MessageWriter;
@@ -38,11 +39,14 @@ public class CDEventCreator {
       "${BROKER_SINK:http://broker-ingress.knative-eventing.svc.cluster.local/default/events-broker}")
   private String BROKER_SINK;
 
-  public void createServiceDeployedEvent() throws IOException {
+  public void createServiceDeployedEvent(Pipeline pipeline, String contextId, String triggerId)
+      throws IOException {
     log.info("Create ServiceDeployed event and send to events-broker URL - {}", BROKER_SINK);
     CDEvent data = new CDEvent();
-    data.setId(123);
-    data.setSubject("ServiceDeployed");
+    data.setPipelineId(pipeline.getId());
+    data.setPipelineName(pipeline.getName());
+    data.setContextId(contextId);
+    data.setTriggerId(triggerId);
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     // TODO : will be invoked from sdk-java later -
     // dev.cdevents.CDEventTypes.createPipelineRunEvent();
@@ -50,17 +54,19 @@ public class CDEventCreator {
         createServiceEvent(
             CD_SERVICE_DEPLOYED_EVENT_TYPE,
             "serviceId",
-            "serviceName",
+            "poc",
             "serviceVersion",
             objectMapper.writeValueAsString(data));
     sendCloudEvent(cloudEvent);
+    log.info("RJR -- cloudEvent service deployed Data {} ", cloudEvent.getData());
+    log.info("RJR -- cloudEvent service deployed Data toString {} ", data.toString());
     log.info("ServiceDeployed event sent to events-broker URL - {}", BROKER_SINK);
   }
 
-  public void createPipelineRunStartedEvent() throws IOException {
+  public CloudEvent createPipelineRunStartedEvent() throws IOException {
     log.info("Create PipelineRunStarted event and send to events-broker URL - {}", BROKER_SINK);
     CDEvent data = new CDEvent();
-    data.setId(123);
+    data.setPipelineId("123");
     data.setSubject("PipelineRunStarted");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     // TODO : will be invoked from sdk-java later -
@@ -74,14 +80,15 @@ public class CDEventCreator {
             "pipelineRunURL",
             "pipelineRunErrors",
             objectMapper.writeValueAsString(data));
-    sendCloudEvent(cloudEvent);
+    // sendCloudEvent(cloudEvent);
     log.info("PipelineRunStarted event sent to events-broker URL - {}", BROKER_SINK);
+    return cloudEvent;
   }
 
   public void createPipelineRunFinishedEvent() throws IOException {
     log.info("Create PipelineRunFinished event and send to events-broker URL - {}", BROKER_SINK);
     CDEvent data = new CDEvent();
-    data.setId(123);
+    data.setPipelineId("123");
     data.setSubject("PipelineRunFinished");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     // TODO : will be invoked from sdk-java later -
@@ -102,7 +109,7 @@ public class CDEventCreator {
   public void createArtifactPackagedEvent() throws IOException {
     log.info("Create ArtifactPackaged event and send to events-broker URL - {}", BROKER_SINK);
     CDEvent data = new CDEvent();
-    data.setId(123);
+    data.setPipelineId("123");
     data.setSubject("ArtifactPackaged");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     // TODO : will be invoked from sdk-java later - dev.cdevents.CDEventTypes.createArtifactEvent();

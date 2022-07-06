@@ -58,8 +58,7 @@ public class CDEventCreator {
             "serviceVersion",
             objectMapper.writeValueAsString(data));
     sendCloudEvent(cloudEvent);
-    log.info("RJR -- cloudEvent service deployed Data {} ", cloudEvent.getData());
-    log.info("RJR -- cloudEvent service deployed Data toString {} ", data.toString());
+    log.info("cloudEvent service deployed Data {} ", cloudEvent.getData());
     log.info("ServiceDeployed event sent to events-broker URL - {}", BROKER_SINK);
   }
 

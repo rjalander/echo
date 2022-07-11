@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="cdevents-sdk-java-0.0.1">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/cdevents-sdk-java-0.0.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

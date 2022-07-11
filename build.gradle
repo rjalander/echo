@@ -87,3 +87,8 @@ subprojects {
 }
 
 defaultTasks ':echo-web:run'
+
+
+repositories {
+  mavenCentral()
+}

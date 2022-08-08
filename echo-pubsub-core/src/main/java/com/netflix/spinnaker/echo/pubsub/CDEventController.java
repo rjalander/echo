@@ -3,18 +3,18 @@ package com.netflix.spinnaker.echo.pubsub;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.netflix.spinnaker.echo.model.Pipeline;
-import com.netflix.spinnaker.echo.model.pubsub.PubsubSystem;
 import com.netflix.spinnaker.echo.pipelinetriggers.PipelineCache;
-import com.netflix.spinnaker.echo.pipelinetriggers.eventhandlers.ManualEventHandler;
 import com.netflix.spinnaker.echo.pipelinetriggers.orca.OrcaService;
 import com.netflix.spinnaker.echo.pipelinetriggers.orca.OrcaService.TriggerResponse;
 import com.netflix.spinnaker.echo.pubsub.model.CDEvent;
 import dev.cdevents.CDEventEnums;
 import io.cloudevents.CloudEvent;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,15 +34,6 @@ import retrofit.client.Response;
 @Slf4j
 public class CDEventController {
 
-  // TODO: EventTypes Should be taken from cdevents-sdk-java - dev.cdevents.CDEventsEnum once
-  // integrated
-
-  //  public static final String CD_ARTIFACT_PACKAGED_EVENT_TYPE = "cd.artifact.packaged.v1";
-  //  public static final String CD_ARTIFACT_PUBLISHED_EVENT_TYPE = "cd.artifact.published.v1";
-  //  public static final String CD_SERVICE_DEPLOYED_EVENT_TYPE = "cd.service.deployed.v1";
-  //  private static final String CD_PIPELINERUN_FINISHED_EVENT_TYPE = "cd.pipelinerun.finished.v1";
-  //  private static final String CD_PIPELINERUN_STARTED_EVENT_TYPE = "cd.pipelinerun.started.v1";
-
   public static final String CD_ARTIFACT_PACKAGED_EVENT_TYPE =
       CDEventEnums.ArtifactPackagedEventV1.getEventType();
   public static final String CD_ARTIFACT_PUBLISHED_EVENT_TYPE =
@@ -55,12 +46,9 @@ public class CDEventController {
       CDEventEnums.PipelineRunStartedEventV1.getEventType();
 
   private static final int retryCount = 5;
-  private static final String EVENT_TYPE = "googleCloudBuild";
-  private static final PubsubSystem pubsubSystem = PubsubSystem.GOOGLE;
 
   @Autowired ObjectMapper objectMapper;
   @Autowired OrcaService orca;
-  @Autowired ManualEventHandler manualEventHandler;
   @Autowired PipelineCache pipelineCache;
   @Autowired CDEventCreator cdEventCreator;
 
@@ -172,7 +160,7 @@ public class CDEventController {
     data.setSubject("cdevent");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     CloudEvent cloudEvent =
-        cdEventCreator.createArtifactEvent(
+        dev.cdevents.CDEventTypes.createArtifactEvent(
             CD_ARTIFACT_PACKAGED_EVENT_TYPE,
             "123",
             "produce_artifact",

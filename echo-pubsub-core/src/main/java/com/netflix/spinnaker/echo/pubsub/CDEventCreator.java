@@ -2,6 +2,7 @@ package com.netflix.spinnaker.echo.pubsub;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.netflix.spinnaker.echo.model.Pipeline;
 import com.netflix.spinnaker.echo.pubsub.model.CDEvent;
 import dev.cdevents.CDEventEnums;
 import io.cloudevents.CloudEvent;
@@ -23,10 +24,6 @@ public class CDEventCreator {
 
   // TODO: EventTypes Should be taken from cdevents-sdk-java - dev.cdevents.CDEventsEnum once
   // integrated
-  //  private static final String CD_PIPELINERUN_FINISHED_EVENT_TYPE = "cd.pipelinerun.finished.v1";
-  //  private static final String CD_PIPELINERUN_STARTED_EVENT_TYPE = "cd.pipelinerun.started.v1";
-  //  public static final String CD_ARTIFACT_PACKAGED_EVENT_TYPE = "cd.artifact.packaged.v1";
-  //  public static final String CD_SERVICE_DEPLOYED_EVENT_TYPE = "cd.service.deployed.v1";
   private static final String CD_PIPELINERUN_FINISHED_EVENT_TYPE =
       CDEventEnums.PipelineRunFinishedEventV1.getEventType();
   private static final String CD_PIPELINERUN_STARTED_EVENT_TYPE =
@@ -38,35 +35,37 @@ public class CDEventCreator {
 
   @Autowired ObjectMapper objectMapper;
 
-  @Value("${BROKER_SINK:http://localhost:8090/default/events-broker}")
+  @Value(
+      "${BROKER_SINK:http://broker-ingress.knative-eventing.svc.cluster.local/default/events-broker}")
   private String BROKER_SINK;
 
-  public void createServiceDeployedEvent() throws IOException {
+  public void createServiceDeployedEvent(Pipeline pipeline, String contextId, String triggerId)
+      throws IOException {
     log.info("Create ServiceDeployed event and send to events-broker URL - {}", BROKER_SINK);
     CDEvent data = new CDEvent();
-    data.setId(123);
-    data.setSubject("ServiceDeployed");
+    data.setPipelineId(pipeline.getId());
+    data.setPipelineName(pipeline.getName());
+    data.setContextId(contextId);
+    data.setTriggerId(triggerId);
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-    // TODO : will be invoked from sdk-java later -
     CloudEvent cloudEvent =
         dev.cdevents.CDEventTypes.createServiceEvent(
             CD_SERVICE_DEPLOYED_EVENT_TYPE,
             "serviceId",
-            "serviceName",
+            "poc",
             "serviceVersion",
             objectMapper.writeValueAsString(data));
     sendCloudEvent(cloudEvent);
+    log.info("cloudEvent service deployed Data {} ", cloudEvent.getData());
     log.info("ServiceDeployed event sent to events-broker URL - {}", BROKER_SINK);
   }
 
-  public void createPipelineRunStartedEvent() throws IOException {
+  public CloudEvent createPipelineRunStartedEvent() throws IOException {
     log.info("Create PipelineRunStarted event and send to events-broker URL - {}", BROKER_SINK);
     CDEvent data = new CDEvent();
-    data.setId(123);
+    data.setPipelineId("123");
     data.setSubject("PipelineRunStarted");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-    // TODO : will be invoked from sdk-java later -
-    // dev.cdevents.CDEventTypes.createPipelineRunEvent();
     CloudEvent cloudEvent =
         dev.cdevents.CDEventTypes.createPipelineRunEvent(
             CD_PIPELINERUN_STARTED_EVENT_TYPE,
@@ -87,8 +86,6 @@ public class CDEventCreator {
     data.setPipelineId("123");
     data.setSubject("PipelineRunFinished");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-    // TODO : will be invoked from sdk-java later -
-    // dev.cdevents.CDEventTypes.createPipelineRunEvent();
     CloudEvent cloudEvent =
         dev.cdevents.CDEventTypes.createPipelineRunEvent(
             CD_PIPELINERUN_FINISHED_EVENT_TYPE,
@@ -108,7 +105,6 @@ public class CDEventCreator {
     data.setPipelineId("123");
     data.setSubject("ArtifactPackaged");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-    // TODO : will be invoked from sdk-java later - dev.cdevents.CDEventTypes.createArtifactEvent();
     CloudEvent cloudEvent =
         dev.cdevents.CDEventTypes.createArtifactEvent(
             CD_ARTIFACT_PACKAGED_EVENT_TYPE,
@@ -153,71 +149,4 @@ public class CDEventCreator {
           }
         });
   }
-
-  //  // TODO : will be removed once after cdevents-sdk-java integrated to echo project
-  //  public static CloudEvent createServiceEvent(
-  //      final String serviceEventType,
-  //      final String serviceId,
-  //      final String serviceName,
-  //      final String serviceVersion,
-  //      final String serviceData) {
-  //    CloudEvent ceToSend =
-  //        buildCloudEvent(serviceEventType, serviceData)
-  //            .withExtension("serviceid", serviceId)
-  //            .withExtension("servicename", serviceName)
-  //            .withExtension("serviceversion", serviceVersion)
-  //            .build();
-  //    return ceToSend;
-  //  }
-  //
-  //  // TODO : will be removed once after cdevents-sdk-java integrated to echo project
-  //  public CloudEvent createArtifactEvent(
-  //      final String artifactEventType,
-  //      final String artifactId,
-  //      final String artifactName,
-  //      final String artifactVersion,
-  //      final String artifactData) {
-  //    CloudEvent ceToSend =
-  //        buildCloudEvent(artifactEventType, artifactData)
-  //            .withExtension("artifactid", artifactId)
-  //            .withExtension("artifactname", artifactName)
-  //            .withExtension("artifactversion", artifactVersion)
-  //            .build();
-  //    return ceToSend;
-  //  }
-  //
-  //  // TODO : will be removed once after cdevents-sdk-java integrated to echo project
-  //  private static CloudEvent createPipelineRunEvent(
-  //      final String pipelineRunEventType,
-  //      final String pipelineRunId,
-  //      final String pipelineRunName,
-  //      final String pipelineRunStatus,
-  //      final String pipelineRunURL,
-  //      final String pipelineRunErrors,
-  //      final String pipelineRunData) {
-  //    CloudEvent ceToSend =
-  //        buildCloudEvent(pipelineRunEventType, pipelineRunData)
-  //            .withExtension("pipelinerunid", pipelineRunId)
-  //            .withExtension("pipelinerunname", pipelineRunName)
-  //            .withExtension("pipelinerunstatus", pipelineRunStatus)
-  //            .withExtension("pipelinerunurl", pipelineRunURL)
-  //            .withExtension("pipelinerunerrors", pipelineRunErrors)
-  //            .build();
-  //    return ceToSend;
-  //  }
-  //
-  //  // TODO : will be removed once after cdevents-sdk-java integrated to echo project
-  //  private static CloudEventBuilder buildCloudEvent(final String eventType, final String
-  // eventData) {
-  //    CloudEventBuilder ceBuilder =
-  //        new CloudEventBuilder()
-  //            .withId(UUID.randomUUID().toString())
-  //            .withSource(URI.create("cdevents-sdk-java"))
-  //            .withType(eventType)
-  //            // TODO: fix to set ContentType in cdevents-sdk-java
-  //            .withDataContentType("application/json; charset=UTF-8")
-  //            .withData(eventData.getBytes(StandardCharsets.UTF_8))
-  //            .withTime(OffsetDateTime.now());
-  //    return ceBuilder;
-  //  }
 }

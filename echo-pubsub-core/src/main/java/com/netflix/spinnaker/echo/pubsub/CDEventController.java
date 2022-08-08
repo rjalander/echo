@@ -2,12 +2,8 @@ package com.netflix.spinnaker.echo.pubsub;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.netflix.spinnaker.echo.api.events.Event;
-import com.netflix.spinnaker.echo.api.events.Metadata;
 import com.netflix.spinnaker.echo.model.Pipeline;
-import com.netflix.spinnaker.echo.model.pubsub.MessageDescription;
 import com.netflix.spinnaker.echo.model.pubsub.PubsubSystem;
-import com.netflix.spinnaker.echo.model.trigger.ManualEvent;
 import com.netflix.spinnaker.echo.pipelinetriggers.PipelineCache;
 import com.netflix.spinnaker.echo.pipelinetriggers.eventhandlers.ManualEventHandler;
 import com.netflix.spinnaker.echo.pipelinetriggers.orca.OrcaService;
@@ -69,53 +65,100 @@ public class CDEventController {
   @Autowired CDEventCreator cdEventCreator;
 
   @RequestMapping(value = "/consume", method = RequestMethod.POST)
-  public ResponseEntity<Void> consumeEvent(@RequestBody CloudEvent inputEvent)
-      throws IOException, TimeoutException {
-    if (inputEvent.getType().equals(CD_PIPELINERUN_FINISHED_EVENT_TYPE)) {
-      System.out.println("Received Event with type - " + CD_PIPELINERUN_FINISHED_EVENT_TYPE);
-      log.info("Received Event with type - " + CD_PIPELINERUN_FINISHED_EVENT_TYPE);
-
-    } else if (inputEvent.getType().equals(CD_PIPELINERUN_STARTED_EVENT_TYPE)) {
-      System.out.println("Received Event with type - " + CD_PIPELINERUN_STARTED_EVENT_TYPE);
-      log.info("Received Event with type - " + CD_PIPELINERUN_STARTED_EVENT_TYPE);
-
-    } else if (inputEvent.getType().equals(CD_SERVICE_DEPLOYED_EVENT_TYPE)) {
-      System.out.println("Received Event with type - " + CD_SERVICE_DEPLOYED_EVENT_TYPE);
-      log.info("Received Event with type - " + CD_SERVICE_DEPLOYED_EVENT_TYPE);
-
-    } else if (inputEvent.getType().equals(CD_ARTIFACT_PUBLISHED_EVENT_TYPE)) {
-      System.out.println("Received Event with type - " + CD_ARTIFACT_PUBLISHED_EVENT_TYPE);
+  public ResponseEntity<Void> consumeEvent(@RequestBody CloudEvent inputEvent) {
+    if (inputEvent.getType().equals(CD_ARTIFACT_PUBLISHED_EVENT_TYPE)) {
       log.info("Received Event with type - " + CD_ARTIFACT_PUBLISHED_EVENT_TYPE);
-      Event event = createEvent(createMessageDescription());
-      ManualEvent manualEvent = manualEventHandler.convertEvent(event);
-      // List<Pipeline> pipeLines = manualEventHandler.getMatchingPipelines(manualEvent,
-      // pipelineCache);
-      List<Pipeline> pipeLines = pipelineCache.getPipelinesSync();
-      for (Pipeline pipeline : pipeLines) {
-        System.out.println("Pipeline from pipelineCache - " + pipeline);
-        if (pipeline.toString().contains("poc")
-            && pipeline.toString().contains("deploy_spinnaker_poc")) {
-          log.info("Found Matching pipeline {}", pipeline);
-          TriggerResponse response = triggerWithRetries(pipeline);
-          log.info(
-              "Successfully triggered pipeline: {} with execution id: {}",
-              pipeline,
-              response.getRef());
-          cdEventCreator.createPipelineRunStartedEvent();
-          // TODO: Mark as finished on some condition
-          cdEventCreator.createPipelineRunFinishedEvent(); // OR -
-          // cdEventCreator.createServiceDeployedEvent(); // - received by Keptn
-        }
+
+      try {
+        String artifactImage =
+            inputEvent.getExtension("artifactid").toString().replace("kind-registry", "localhost");
+        log.info("Received latest artifact image from event {} ", artifactImage);
+
+        String ceDataJsonString =
+            new String(inputEvent.getData().toBytes(), StandardCharsets.UTF_8);
+        Map<String, Object> ceDataMap = objectMapper.readValue(ceDataJsonString, HashMap.class);
+        String contextId = (String) ceDataMap.get("shkeptncontext");
+        String triggerId = (String) ceDataMap.get("triggerid");
+        log.info("Received contextId - {}, triggerId - {}", contextId, triggerId);
+
+        triggerPipelineWithArtifactData(artifactImage, contextId, triggerId);
+      } catch (Exception e) {
+        log.error(
+            "Exception occured while proceesing cdevent/consume request. {} ", e.getMessage());
       }
     } else {
       throw new IllegalStateException(
           "Error: Un supported Event type received " + inputEvent.getType() + "\"");
     }
 
-    CDEvent data = objectMapper.readValue(inputEvent.getData().toBytes(), CDEvent.class);
-    System.out.println("CDEvent getID --> " + data.getId());
-    System.out.println("CDEvent getSubject --> " + data.getSubject());
     return ResponseEntity.ok().build();
+  }
+
+  private void triggerPipelineWithArtifactData(
+      String artifactImage, String contextId, String triggerId) throws TimeoutException {
+    pipelineCache
+        .getPipelinesSync()
+        .forEach(
+            pipeline -> {
+              log.info("Pipeline from pipelineCache - {}", pipeline);
+              if (pipeline.getName().equals(("deploy-spinnaker-poc"))) {
+                log.info("Found Matching pipeline {}", pipeline);
+
+                List<Map<String, Object>> stageList = pipeline.getStages();
+                Optional<Map<String, Object>> deployStageMap =
+                    stageList.stream()
+                        .filter(
+                            stageMap ->
+                                stageMap.get("type").toString().equalsIgnoreCase("deployManifest"))
+                        .findFirst();
+
+                if (deployStageMap.isPresent()) {
+                  List<Map<String, Object>> manifestList =
+                      (List<Map<String, Object>>) deployStageMap.get().get("manifests");
+                  Optional<Map<String, Object>> deployManifestMap =
+                      manifestList.stream()
+                          .filter(
+                              manifestMap ->
+                                  manifestMap.get("kind").toString().equalsIgnoreCase("Deployment"))
+                          .findFirst();
+                  if (deployManifestMap.isPresent()) {
+                    Map<String, Object> specMap =
+                        (Map<String, Object>) deployManifestMap.get().get("spec");
+                    Map<String, Object> templateMap = (Map<String, Object>) specMap.get("template");
+                    Map<String, Object> innerSpecMap =
+                        (Map<String, Object>) templateMap.get("spec");
+                    List<Map<String, Object>> containersList =
+                        (List<Map<String, Object>>) innerSpecMap.get("containers");
+                    containersList.forEach(
+                        containersMap -> {
+                          if (containersMap
+                              .get("name")
+                              .toString()
+                              .equalsIgnoreCase("cdevents-spinnaker-poc")) {
+                            containersMap.replace("image", artifactImage);
+                            log.info(
+                                "Replaced container image from artifact data with {}",
+                                artifactImage);
+                          }
+                        });
+                  }
+                }
+
+                TriggerResponse response = triggerWithRetries(pipeline);
+                log.info(
+                    "Successfully triggered pipeline: {} with execution id: {}",
+                    pipeline,
+                    response.getRef());
+                try {
+                  cdEventCreator.createPipelineRunStartedEvent();
+                  // TODO: Mark as finished on checking on pipelinerun status
+                  cdEventCreator.createPipelineRunFinishedEvent(); // OR -
+                  cdEventCreator.createServiceDeployedEvent(pipeline, contextId, triggerId);
+                } catch (IOException e) {
+                  log.error("Exception occured while creating cdevent, {} ", e.getMessage());
+                }
+              }
+            });
   }
 
   @Value("${BROKER_SINK:http://localhost:8090/default/events-broker}")
@@ -125,11 +168,11 @@ public class CDEventController {
   public ResponseEntity<Void> produceEvent() throws IOException, TimeoutException {
     log.info("produceEvent() : for BROKER_SINK URL - {}", BROKER_SINK);
     CDEvent data = new CDEvent();
-    data.setId(123);
+    data.setPipelineId("123");
     data.setSubject("cdevent");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     CloudEvent cloudEvent =
-        dev.cdevents.CDEventTypes.createArtifactEvent(
+        cdEventCreator.createArtifactEvent(
             CD_ARTIFACT_PACKAGED_EVENT_TYPE,
             "123",
             "produce_artifact",
@@ -138,21 +181,6 @@ public class CDEventController {
     cdEventCreator.sendCloudEvent(cloudEvent);
     log.info("produceEvent() : Done for BROKER_SINK URL - {}", BROKER_SINK);
     return ResponseEntity.ok().build();
-  }
-
-  public Event createEvent(MessageDescription description) {
-    log.info("Processing pubsub event with payload {}", description.getMessagePayload());
-
-    var event = new Event();
-    Map<String, Object> content = new HashMap<>();
-    content.put("messageDescription", description);
-
-    Metadata details = new Metadata();
-    details.setType(EVENT_TYPE);
-
-    event.setContent(content);
-    event.setDetails(details);
-    return event;
   }
 
   private TriggerResponse triggerWithRetries(Pipeline pipeline) {
@@ -177,7 +205,6 @@ public class CDEventController {
 
       try {
         Thread.sleep(5000);
-        // registry.counter("orca.trigger.retries").increment();
       } catch (InterruptedException ignored) {
       }
     }
@@ -199,21 +226,6 @@ public class CDEventController {
     }
 
     return false;
-  }
-
-  private MessageDescription createMessageDescription() {
-    Map<String, String> messageAttributes = new HashMap<>();
-    MessageDescription description =
-        MessageDescription.builder()
-            .subscriptionName("poc_subscription")
-            .messagePayload("poc_payload")
-            .messageAttributes(messageAttributes)
-            .pubsubSystem(pubsubSystem)
-            .ackDeadlineSeconds(60) // Set a high upper bound on message processing time.
-            .retentionDeadlineSeconds(
-                7 * 24 * 60 * 60) // Expire key after max retention time, which is 7 days.
-            .build();
-    return description;
   }
 
   @RequestMapping(value = "/consume", method = RequestMethod.GET)

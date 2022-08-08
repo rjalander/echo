@@ -76,14 +76,15 @@ public class CDEventCreator {
             "pipelineRunURL",
             "pipelineRunErrors",
             objectMapper.writeValueAsString(data));
-    sendCloudEvent(cloudEvent);
+    // sendCloudEvent(cloudEvent);
     log.info("PipelineRunStarted event sent to events-broker URL - {}", BROKER_SINK);
+    return cloudEvent;
   }
 
   public void createPipelineRunFinishedEvent() throws IOException {
     log.info("Create PipelineRunFinished event and send to events-broker URL - {}", BROKER_SINK);
     CDEvent data = new CDEvent();
-    data.setId(123);
+    data.setPipelineId("123");
     data.setSubject("PipelineRunFinished");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     // TODO : will be invoked from sdk-java later -
@@ -104,7 +105,7 @@ public class CDEventCreator {
   public void createArtifactPackagedEvent() throws IOException {
     log.info("Create ArtifactPackaged event and send to events-broker URL - {}", BROKER_SINK);
     CDEvent data = new CDEvent();
-    data.setId(123);
+    data.setPipelineId("123");
     data.setSubject("ArtifactPackaged");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     // TODO : will be invoked from sdk-java later - dev.cdevents.CDEventTypes.createArtifactEvent();

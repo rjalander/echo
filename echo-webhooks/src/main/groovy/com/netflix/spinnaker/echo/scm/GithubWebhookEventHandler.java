@@ -21,12 +21,14 @@ import static net.logstash.logback.argument.StructuredArguments.kv;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.spinnaker.echo.api.events.Event;
 import com.netflix.spinnaker.echo.jackson.EchoObjectMapper;
+import com.netflix.spinnaker.echo.scm.github.GithubBranchEvent;
 import com.netflix.spinnaker.echo.scm.github.GithubPullRequestEvent;
 import com.netflix.spinnaker.echo.scm.github.GithubPushEvent;
 import com.netflix.spinnaker.echo.scm.github.GithubWebhookEvent;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -51,17 +53,14 @@ public class GithubWebhookEventHandler implements GitWebhookHandler {
     return true;
   }
 
-  public void handle(Event event, Map postedEvent) {
+  public void handle(Event event, Map postedEvent, HttpHeaders headers) {
     if (!shouldSendEvent(event)) {
       log.info(
-          "Webhook ping received from github {} {} {}",
+          "Webhook ping received from github {} {}",
+          kv("hook_id", event.content.get("hook_id")),
           kv(
-              "hook_id",
-              event.content.get("hook_id"),
-              kv(
-                      "repository",
-                      ((Map<String, Object>) event.content.get("repository")).get("full_name"))
-                  .toString()));
+              "repository",
+              ((Map<String, Object>) event.content.get("repository")).get("full_name")));
       return;
     }
 
@@ -73,20 +72,37 @@ public class GithubWebhookEventHandler implements GitWebhookHandler {
     if (event.content.containsKey("pull_request")) {
       webhookEvent = objectMapper.convertValue(event.content, GithubPullRequestEvent.class);
       githubEvent = "pull_request";
+    } else if ("branch".equals(event.content.get("ref_type"))) {
+      GithubBranchEvent branchEvent =
+          objectMapper.convertValue(event.content, GithubBranchEvent.class);
+      branchEvent.setAction(headers.getFirst("x-github-event"));
+      webhookEvent = branchEvent;
+      githubEvent = "branch";
     } else {
       // Default to 'Push'
       webhookEvent = objectMapper.convertValue(event.content, GithubPushEvent.class);
       githubEvent = "push";
     }
 
-    String fullRepoName = webhookEvent.getFullRepoName(event, postedEvent);
+    String fullRepoName = webhookEvent.getFullRepoName();
     Map<String, String> results = new HashMap<>();
-    results.put("repoProject", webhookEvent.getRepoProject(event, postedEvent));
-    results.put("slug", webhookEvent.getSlug(event, postedEvent));
-    results.put("hash", webhookEvent.getHash(event, postedEvent));
-    results.put("branch", webhookEvent.getBranch(event, postedEvent));
-    results.put(
-        "action", githubEvent.concat(":").concat(webhookEvent.getAction(event, postedEvent)));
+    results.put("repoProject", webhookEvent.getRepoProject());
+    results.put("slug", webhookEvent.getSlug());
+    results.put("hash", webhookEvent.getHash());
+    results.put("branch", webhookEvent.getBranch());
+    results.put("action", githubEvent.concat(":").concat(webhookEvent.getAction()));
+
+    if (webhookEvent instanceof GithubPullRequestEvent) {
+      GithubPullRequestEvent pullRequestEvent = (GithubPullRequestEvent) webhookEvent;
+      if (pullRequestEvent.getPullRequest() != null) {
+        GithubPullRequestEvent.PullRequest pullRequest = pullRequestEvent.getPullRequest();
+        results.put("number", String.valueOf(pullRequest.getNumber()));
+        results.put("draft", String.valueOf(pullRequest.getDraft()));
+        results.put("state", pullRequest.getState());
+        results.put("title", pullRequest.getTitle());
+      }
+    }
+
     event.content.putAll(results);
 
     log.info(

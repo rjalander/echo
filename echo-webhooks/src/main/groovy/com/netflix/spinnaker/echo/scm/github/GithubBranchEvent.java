@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Netflix, Inc.
+ * Copyright 2022 Schibsted ASA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,29 +21,27 @@ import java.util.Optional;
 import lombok.Data;
 
 @Data
-public class GithubPushEvent implements GithubWebhookEvent {
-  Repository repository;
-  String after;
-  String ref;
-
-  public static final String ACTION = "push";
+public class GithubBranchEvent implements GithubWebhookEvent {
+  private Repository repository;
+  private String ref;
+  private String action;
 
   // `.repository.full_name`
   @Override
   public String getFullRepoName() {
     return Optional.of(this)
-        .map(GithubPushEvent::getRepository)
+        .map(GithubBranchEvent::getRepository)
         .map(Repository::getFullName)
         .orElse("");
   }
 
-  // `.repository.owner.name`
+  // `.repository.owner.login`
   @Override
   public String getRepoProject() {
     return Optional.of(this)
-        .map(GithubPushEvent::getRepository)
+        .map(GithubBranchEvent::getRepository)
         .map(Repository::getOwner)
-        .map(RepositoryOwner::getName)
+        .map(RepositoryOwner::getLogin)
         .orElse("");
   }
 
@@ -51,27 +49,21 @@ public class GithubPushEvent implements GithubWebhookEvent {
   @Override
   public String getSlug() {
     return Optional.of(this)
-        .map(GithubPushEvent::getRepository)
+        .map(GithubBranchEvent::getRepository)
         .map(Repository::getName)
         .orElse("");
   }
 
-  // `.after`
+  // `.sha` (doesn't exist, but it's required by the interface)
   @Override
   public String getHash() {
-    return Optional.of(this).map(GithubPushEvent::getAfter).orElse("");
+    return "";
   }
 
-  // `.ref`, remove `refs/heads/`
+  // `.ref`
   @Override
   public String getBranch() {
-    // Replace on "" still returns "", which is fine
-    return Optional.of(this).map(GithubPushEvent::getRef).orElse("").replace("refs/heads/", "");
-  }
-
-  @Override
-  public String getAction() {
-    return ACTION;
+    return Optional.of(this).map(GithubBranchEvent::getRef).orElse("");
   }
 
   @Data
@@ -85,6 +77,6 @@ public class GithubPushEvent implements GithubWebhookEvent {
 
   @Data
   private static class RepositoryOwner {
-    String name;
+    String login;
   }
 }

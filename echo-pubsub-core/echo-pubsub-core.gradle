@@ -28,6 +28,7 @@ dependencies {
   implementation "com.squareup.retrofit:retrofit"
   implementation "com.squareup.retrofit:converter-jackson"
   implementation "com.jakewharton.retrofit:retrofit1-okhttp3-client:1.1.0"
+  implementation files('cdevents-sdk-java-0.0.1.jar')
 
   implementation "redis.clients:jedis"
   implementation "io.reactivex:rxjava"

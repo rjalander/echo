@@ -8,6 +8,7 @@ import com.netflix.spinnaker.echo.pipelinetriggers.orca.OrcaService;
 import com.netflix.spinnaker.echo.pipelinetriggers.orca.OrcaService.TriggerResponse;
 import com.netflix.spinnaker.echo.pubsub.model.CDEvent;
 import dev.cdevents.CDEventEnums;
+import dev.cdevents.CDEventTypes;
 import io.cloudevents.CloudEvent;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -160,7 +161,7 @@ public class CDEventController {
     data.setSubject("cdevent");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     CloudEvent cloudEvent =
-        dev.cdevents.CDEventTypes.createArtifactEvent(
+        CDEventTypes.createArtifactEvent(
             CD_ARTIFACT_PACKAGED_EVENT_TYPE,
             "123",
             "produce_artifact",

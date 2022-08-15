@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.netflix.spinnaker.echo.model.Pipeline;
 import com.netflix.spinnaker.echo.pubsub.model.CDEvent;
 import dev.cdevents.CDEventEnums;
+import dev.cdevents.CDEventTypes;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.message.MessageWriter;
 import io.cloudevents.http.HttpMessageFactory;
@@ -46,10 +47,8 @@ public class CDEventCreator {
     data.setContextId(contextId);
     data.setTriggerId(triggerId);
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-    // TODO : will be invoked from sdk-java later -
-    // dev.cdevents.CDEventTypes.createPipelineRunEvent(
     CloudEvent cloudEvent =
-        dev.cdevents.CDEventTypes.createServiceEvent(
+        CDEventTypes.createServiceEvent(
             CD_SERVICE_DEPLOYED_EVENT_TYPE,
             "serviceId",
             "poc",
@@ -66,10 +65,8 @@ public class CDEventCreator {
     data.setPipelineId("123");
     data.setSubject("PipelineRunStarted");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-    // TODO : will be invoked from sdk-java later -
-    // dev.cdevents.CDEventTypes.createPipelineRunEvent();
     CloudEvent cloudEvent =
-        dev.cdevents.CDEventTypes.createPipelineRunEvent(
+        CDEventTypes.createPipelineRunEvent(
             CD_PIPELINERUN_STARTED_EVENT_TYPE,
             "pipelineRunId",
             "pipelineRunName",
@@ -88,10 +85,8 @@ public class CDEventCreator {
     data.setPipelineId("123");
     data.setSubject("PipelineRunFinished");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-    // TODO : will be invoked from sdk-java later -
-    // dev.cdevents.CDEventTypes.createPipelineRunEvent();
     CloudEvent cloudEvent =
-        dev.cdevents.CDEventTypes.createPipelineRunEvent(
+        CDEventTypes.createPipelineRunEvent(
             CD_PIPELINERUN_FINISHED_EVENT_TYPE,
             "pipelineRunId",
             "pipelineRunName",
@@ -109,9 +104,8 @@ public class CDEventCreator {
     data.setPipelineId("123");
     data.setSubject("ArtifactPackaged");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-    // TODO : will be invoked from sdk-java later - dev.cdevents.CDEventTypes.createArtifactEvent();
     CloudEvent cloudEvent =
-        dev.cdevents.CDEventTypes.createArtifactEvent(
+        CDEventTypes.createArtifactEvent(
             CD_ARTIFACT_PACKAGED_EVENT_TYPE,
             "artifactId",
             "artifactName",

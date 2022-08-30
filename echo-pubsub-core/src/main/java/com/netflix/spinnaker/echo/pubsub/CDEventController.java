@@ -48,20 +48,24 @@ public class CDEventController {
 
   @RequestMapping(value = "/consume", method = RequestMethod.POST)
   public ResponseEntity<Void> consumeEvent(@RequestBody CloudEvent inputEvent) {
-    if (inputEvent.getType().equals(CD_ARTIFACT_PUBLISHED_EVENT_TYPE)) {
-      log.info("Received Event with type - " + CD_ARTIFACT_PUBLISHED_EVENT_TYPE);
+    if (inputEvent.getType().equals(CD_ARTIFACT_PACKAGED_EVENT_TYPE)) {
+      log.info("Received Event with type - " + CD_ARTIFACT_PACKAGED_EVENT_TYPE);
 
       try {
         String artifactImage =
             inputEvent.getExtension("artifactid").toString().replace("kind-registry", "localhost");
         log.info("Received latest artifact image from event {} ", artifactImage);
 
+        String contextId = "";
+        String triggerId = "";
         String ceDataJsonString =
             new String(inputEvent.getData().toBytes(), StandardCharsets.UTF_8);
         Map<String, Object> ceDataMap = objectMapper.readValue(ceDataJsonString, HashMap.class);
-        String contextId = (String) ceDataMap.get("shkeptncontext");
-        String triggerId = (String) ceDataMap.get("triggerid");
-        log.info("Received contextId - {}, triggerId - {}", contextId, triggerId);
+        if (ceDataMap.get("shkeptncontext") != null && ceDataMap.get("triggerid") != null) {
+          contextId = (String) ceDataMap.get("shkeptncontext");
+          triggerId = (String) ceDataMap.get("triggerid");
+          log.info("Received contextId - {}, triggerId - {}", contextId, triggerId);
+        }
 
         triggerPipelineWithArtifactData(artifactImage, contextId, triggerId);
       } catch (Exception e) {
@@ -134,8 +138,8 @@ public class CDEventController {
                 try {
                   cdEventCreator.createPipelineRunStartedEvent();
                   // TODO: Mark as finished on checking on pipelinerun status
-                  cdEventCreator.createPipelineRunFinishedEvent(); // OR -
-                  cdEventCreator.createServiceDeployedEvent(pipeline, contextId, triggerId);
+                  cdEventCreator.createPipelineRunFinishedEvent(pipeline); // OR -
+                  // cdEventCreator.createServiceDeployedEvent(pipeline, contextId, triggerId);
                 } catch (IOException e) {
                   log.error("Exception occured while creating cdevent, {} ", e.getMessage());
                 }

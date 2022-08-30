@@ -62,7 +62,7 @@ public class CDEventCreator {
     log.info("ServiceDeployed event sent to events-broker URL - {}", BROKER_SINK);
   }
 
-  public CloudEvent createPipelineRunStartedEvent() throws IOException {
+  public void createPipelineRunStartedEvent() throws IOException {
     log.info("Create PipelineRunStarted event and send to events-broker URL - {}", BROKER_SINK);
     CDEvent data = new CDEvent();
     data.setPipelineId("123");
@@ -81,23 +81,22 @@ public class CDEventCreator {
             objectMapper.writeValueAsString(data));
     // sendCloudEvent(cloudEvent);
     log.info("PipelineRunStarted event sent to events-broker URL - {}", BROKER_SINK);
-    return cloudEvent;
   }
 
-  public void createPipelineRunFinishedEvent() throws IOException {
+  public void createPipelineRunFinishedEvent(Pipeline pipeline) throws IOException {
     log.info("Create PipelineRunFinished event and send to events-broker URL - {}", BROKER_SINK);
     CDEvent data = new CDEvent();
-    data.setPipelineId("123");
-    data.setSubject("PipelineRunFinished");
+    data.setPipelineId(pipeline.getId());
+    data.setPipelineName(pipeline.getName());
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     // TODO : will be invoked from sdk-java later -
     // dev.cdevents.CDEventTypes.createPipelineRunEvent();
     CloudEvent cloudEvent =
         createPipelineRunEvent(
             CD_PIPELINERUN_FINISHED_EVENT_TYPE,
-            "pipelineRunId",
-            "pipelineRunName",
-            "pipelineRunStatus",
+            pipeline.getId(),
+            pipeline.getName(),
+            "SUCCESSFUL",
             "pipelineRunURL",
             "pipelineRunErrors",
             objectMapper.writeValueAsString(data));

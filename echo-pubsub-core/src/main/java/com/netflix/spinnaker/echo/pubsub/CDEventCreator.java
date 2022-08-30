@@ -42,8 +42,8 @@ public class CDEventCreator {
       throws IOException {
     log.info("Create ServiceDeployed event and send to events-broker URL - {}", BROKER_SINK);
     CDEvent data = new CDEvent();
-    data.setPipelineId(pipeline.getId());
-    data.setPipelineName(pipeline.getName());
+    data.setEventId(pipeline.getId());
+    data.setEventName(CD_SERVICE_DEPLOYED_EVENT_TYPE);
     data.setContextId(contextId);
     data.setTriggerId(triggerId);
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
@@ -62,7 +62,7 @@ public class CDEventCreator {
   public void createPipelineRunStartedEvent() throws IOException {
     log.info("Create PipelineRunStarted event and send to events-broker URL - {}", BROKER_SINK);
     CDEvent data = new CDEvent();
-    data.setPipelineId("123");
+    data.setEventId("123");
     data.setSubject("PipelineRunStarted");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     CloudEvent cloudEvent =
@@ -82,14 +82,14 @@ public class CDEventCreator {
       Pipeline pipeline, String artifactId, String artifactName) throws IOException {
     log.info("Create PipelineRunFinished event and send to events-broker URL - {}", BROKER_SINK);
     CDEvent data = new CDEvent();
-    data.setPipelineId(pipeline.getId());
-    data.setPipelineName(pipeline.getName());
+    data.setEventId(pipeline.getId());
+    data.setEventName(CDEventEnums.PipelineRunFinishedEventV1.getEventType());
     data.setArtifactId(artifactId);
     data.setArtifactName(artifactName);
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     CloudEvent cloudEvent =
         CDEventTypes.createPipelineRunEvent(
-            CD_PIPELINERUN_FINISHED_EVENT_TYPE,
+            CDEventEnums.PipelineRunFinishedEventV1.getEventType(),
             pipeline.getId(),
             pipeline.getName(),
             "SUCCESSFUL",
@@ -103,7 +103,7 @@ public class CDEventCreator {
   public void createArtifactPackagedEvent() throws IOException {
     log.info("Create ArtifactPackaged event and send to events-broker URL - {}", BROKER_SINK);
     CDEvent data = new CDEvent();
-    data.setPipelineId("123");
+    data.setEventId("123");
     data.setSubject("ArtifactPackaged");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     CloudEvent cloudEvent =

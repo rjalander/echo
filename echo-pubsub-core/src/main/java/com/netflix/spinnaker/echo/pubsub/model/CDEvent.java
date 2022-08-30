@@ -2,63 +2,66 @@ package com.netflix.spinnaker.echo.pubsub.model;
 
 public class CDEvent {
 
-  private String pipelineId;
-  private String pipelineName;
-  private String pipelineResults;
+  private String eventId;
+  private String eventName;
   private String contextId;
   private String triggerId;
   private String subject;
+
   private String artifactId;
+
   private String artifactName;
 
   public CDEvent() {
     // default Constructor
   }
 
-  public String getPipelineId() {
-    return pipelineId;
+  /** @return the eventId */
+  public String getEventId() {
+    return eventId;
   }
 
-  public void setPipelineId(String pipelineId) {
-    this.pipelineId = pipelineId;
+  /** @param eventId the eventId to set */
+  public void setEventId(String eventId) {
+    this.eventId = eventId;
   }
 
-  public String getPipelineName() {
-    return pipelineName;
+  /** @return the eventName */
+  public String getEventName() {
+    return eventName;
   }
 
-  public void setPipelineName(String pipelineName) {
-    this.pipelineName = pipelineName;
+  /** @param eventName the eventName to set */
+  public void setEventName(String eventName) {
+    this.eventName = eventName;
   }
 
-  public String getPipelineResults() {
-    return pipelineResults;
-  }
-
-  public void setPipelineResults(String pipelineResults) {
-    this.pipelineResults = pipelineResults;
-  }
-
+  /** @return the contextId */
   public String getContextId() {
     return contextId;
   }
 
+  /** @param contextId the contextId to set */
   public void setContextId(String contextId) {
     this.contextId = contextId;
   }
 
+  /** @return the triggerId */
   public String getTriggerId() {
     return triggerId;
   }
 
+  /** @param triggerId the triggerId to set */
   public void setTriggerId(String triggerId) {
     this.triggerId = triggerId;
   }
 
+  /** @return the subject */
   public String getSubject() {
     return subject;
   }
 
+  /** @param subject the subject to set */
   public void setSubject(String subject) {
     this.subject = subject;
   }
@@ -85,12 +88,10 @@ public class CDEvent {
 
   @Override
   public String toString() {
-    return "CDEvent [pipelineId="
-        + pipelineId
-        + ", pipelineName="
-        + pipelineName
-        + ", pipelineResults="
-        + pipelineResults
+    return "CDEvent [eventId="
+        + eventId
+        + ", eventName="
+        + eventName
         + ", contextId="
         + contextId
         + ", triggerId="

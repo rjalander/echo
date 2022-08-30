@@ -149,7 +149,7 @@ public class CDEventController {
                     pipeline,
                     response.getRef());
                 try {
-                  cdEventCreator.createPipelineRunStartedEvent();
+                  // cdEventCreator.createPipelineRunStartedEvent();
                   // TODO: Mark as finished on checking on pipelinerun status
                   cdEventCreator.createPipelineRunFinishedEvent(
                       pipeline, artifactId, artifactName); // OR -

@@ -8,6 +8,8 @@ public class CDEvent {
   private String contextId;
   private String triggerId;
   private String subject;
+  private String artifactId;
+  private String artifactName;
 
   public CDEvent() {
     // default Constructor
@@ -61,6 +63,26 @@ public class CDEvent {
     this.subject = subject;
   }
 
+  /** @return the artifactId */
+  public String getArtifactId() {
+    return artifactId;
+  }
+
+  /** @param artifactId the artifactId to set */
+  public void setArtifactId(String artifactId) {
+    this.artifactId = artifactId;
+  }
+
+  /** @return the artifactName */
+  public String getArtifactName() {
+    return artifactName;
+  }
+
+  /** @param artifactName the artifactName to set */
+  public void setArtifactName(String artifactName) {
+    this.artifactName = artifactName;
+  }
+
   @Override
   public String toString() {
     return "CDEvent [pipelineId="
@@ -75,6 +97,10 @@ public class CDEvent {
         + triggerId
         + ", subject="
         + subject
+        + ", artifactId="
+        + artifactId
+        + ", artifactName="
+        + artifactName
         + "]";
   }
 }

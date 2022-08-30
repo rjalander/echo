@@ -78,11 +78,14 @@ public class CDEventCreator {
     log.info("PipelineRunStarted event sent to events-broker URL - {}", BROKER_SINK);
   }
 
-  public void createPipelineRunFinishedEvent(Pipeline pipeline) throws IOException {
+  public void createPipelineRunFinishedEvent(
+      Pipeline pipeline, String artifactId, String artifactName) throws IOException {
     log.info("Create PipelineRunFinished event and send to events-broker URL - {}", BROKER_SINK);
     CDEvent data = new CDEvent();
     data.setPipelineId(pipeline.getId());
     data.setPipelineName(pipeline.getName());
+    data.setArtifactId(artifactId);
+    data.setArtifactName(artifactName);
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     CloudEvent cloudEvent =
         CDEventTypes.createPipelineRunEvent(

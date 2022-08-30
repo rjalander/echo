@@ -55,13 +55,17 @@ public class CDEventController {
 
   @RequestMapping(value = "/consume", method = RequestMethod.POST)
   public ResponseEntity<Void> consumeEvent(@RequestBody CloudEvent inputEvent) {
-    if (inputEvent.getType().equals(CD_ARTIFACT_PACKAGED_EVENT_TYPE)) {
+    log.info(
+        "CDEventEnums.ArtifactPackagedEventV1.getEventType() --> "
+            + CDEventEnums.ArtifactPackagedEventV1.getEventType());
+    if (inputEvent.getType().equals(CDEventEnums.ArtifactPackagedEventV1.getEventType())) {
       log.info("Received Event with type - " + CD_ARTIFACT_PACKAGED_EVENT_TYPE);
 
       try {
-        String artifactImage =
-            inputEvent.getExtension("artifactid").toString().replace("kind-registry", "localhost");
-        log.info("Received latest artifact image from event {} ", artifactImage);
+
+        String artifactId = inputEvent.getExtension("artifactid").toString();
+        String artifactName = inputEvent.getExtension("artifactname").toString();
+        log.info("Received latest artifactid from input event {} ", artifactId);
 
         String contextId = "";
         String triggerId = "";
@@ -74,7 +78,7 @@ public class CDEventController {
           log.info("Received contextId - {}, triggerId - {}", contextId, triggerId);
         }
 
-        triggerPipelineWithArtifactData(artifactImage, contextId, triggerId);
+        triggerPipelineWithArtifactData(artifactId, artifactName, contextId, triggerId);
       } catch (Exception e) {
         log.error(
             "Exception occured while proceesing cdevent/consume request. {} ", e.getMessage());
@@ -88,7 +92,9 @@ public class CDEventController {
   }
 
   private void triggerPipelineWithArtifactData(
-      String artifactImage, String contextId, String triggerId) throws TimeoutException {
+      String artifactId, String artifactName, String contextId, String triggerId)
+      throws TimeoutException {
+    String artifactImage = artifactId.replace("kind-registry", "localhost");
     pipelineCache
         .getPipelinesSync()
         .forEach(
@@ -145,7 +151,8 @@ public class CDEventController {
                 try {
                   cdEventCreator.createPipelineRunStartedEvent();
                   // TODO: Mark as finished on checking on pipelinerun status
-                  cdEventCreator.createPipelineRunFinishedEvent(pipeline); // OR -
+                  cdEventCreator.createPipelineRunFinishedEvent(
+                      pipeline, artifactId, artifactName); // OR -
                   // cdEventCreator.createServiceDeployedEvent(pipeline, contextId, triggerId);
                 } catch (IOException e) {
                   log.error("Exception occured while creating cdevent, {} ", e.getMessage());

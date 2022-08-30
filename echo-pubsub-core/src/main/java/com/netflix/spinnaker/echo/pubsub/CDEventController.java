@@ -168,7 +168,7 @@ public class CDEventController {
   public ResponseEntity<Void> produceEvent() throws IOException, TimeoutException {
     log.info("produceEvent() : for BROKER_SINK URL - {}", BROKER_SINK);
     CDEvent data = new CDEvent();
-    data.setPipelineId("123");
+    data.setEventId("123");
     data.setSubject("cdevent");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     CloudEvent cloudEvent =

@@ -86,6 +86,7 @@ public class CDEventCreator {
     data.setEventName(CDEventEnums.PipelineRunFinishedEventV1.getEventType());
     data.setArtifactId(artifactId);
     data.setArtifactName(artifactName);
+    data.setSubject("SpinnakerPipeline");
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     CloudEvent cloudEvent =
         CDEventTypes.createPipelineRunEvent(

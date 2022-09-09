@@ -151,8 +151,8 @@ public class CDEventController {
                 try {
                   cdEventCreator.createPipelineRunStartedEvent(pipeline, artifactId, artifactName);
                   // TODO: Mark as finished on checking on pipelinerun status
-                  log.info("Wait for 1 Min to Finish the pipeline run");
-                  Thread.sleep(60000);
+                  log.info("Wait for 30 Sec to Finish the pipeline run");
+                  Thread.sleep(30000);
                   cdEventCreator.createPipelineRunFinishedEvent(
                       pipeline, artifactId, artifactName); // OR -
                   // cdEventCreator.createServiceDeployedEvent(pipeline, contextId, triggerId);

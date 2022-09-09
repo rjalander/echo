@@ -78,7 +78,7 @@ public class CDEventCreator {
             "pipelineRunURL",
             "pipelineRunErrors",
             objectMapper.writeValueAsString(data));
-    // sendCloudEvent(cloudEvent);
+    sendCloudEvent(cloudEvent);
     log.info("PipelineRunStarted event sent to events-broker URL - {}", BROKER_SINK);
   }
 

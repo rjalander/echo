@@ -151,11 +151,11 @@ public class CDEventController {
                 try {
                   cdEventCreator.createPipelineRunStartedEvent(pipeline, artifactId, artifactName);
                   // TODO: Mark as finished on checking on pipelinerun status
-                  log.info("Wait for 30 Sec to Finish the pipeline run");
-                  Thread.sleep(30000);
+                  log.info("Wait for 1Min to Finish the pipeline run");
+                  Thread.sleep(60000);
                   cdEventCreator.createPipelineRunFinishedEvent(
                       pipeline, artifactId, artifactName); // OR -
-                  // cdEventCreator.createServiceDeployedEvent(pipeline, contextId, triggerId);
+                  cdEventCreator.createServiceDeployedEvent(pipeline, contextId, triggerId);
                 } catch (Exception e) {
                   log.error("Exception occured while creating cdevent, {} ", e.getMessage());
                 }

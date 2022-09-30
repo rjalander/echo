@@ -56,10 +56,10 @@ public class CDEventController {
   @RequestMapping(value = "/consume", method = RequestMethod.POST)
   public ResponseEntity<Void> consumeEvent(@RequestBody CloudEvent inputEvent) {
     log.info(
-        "CDEventEnums.ArtifactPackagedEventV1.getEventType() --> "
-            + CDEventEnums.ArtifactPackagedEventV1.getEventType());
-    if (inputEvent.getType().equals(CDEventEnums.ArtifactPackagedEventV1.getEventType())) {
-      log.info("Received Event with type - " + CD_ARTIFACT_PACKAGED_EVENT_TYPE);
+        "CDEventEnums.ArtifactPublishedEventV1.getEventType() --> "
+            + CDEventEnums.ArtifactPublishedEventV1.getEventType());
+    if (inputEvent.getType().equals(CDEventEnums.ArtifactPublishedEventV1.getEventType())) {
+      log.info("Received Event with type - " + CD_ARTIFACT_PUBLISHED_EVENT_TYPE);
 
       try {
 
